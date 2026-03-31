@@ -1,7 +1,7 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import {
-    Button, Menu, MenuItem, IconButton,
+    Button, Menu, MenuItem,
     Tooltip, ListItemIcon, ListItemText
 } from '@mui/material';
 import { Language } from '@mui/icons-material';
