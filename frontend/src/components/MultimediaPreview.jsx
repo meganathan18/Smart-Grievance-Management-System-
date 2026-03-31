@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import SecureAudioPlayer from './SecureAudioPlayer';
 import {
-    Box, Typography, Paper, IconButton, Dialog, DialogContent,
-    DialogTitle, Tooltip, Avatar, Stack, CircularProgress
+    Box, Typography, Paper, Dialog, DialogContent,
+    DialogTitle, Avatar, Stack, CircularProgress
 } from '@mui/material';
 import {
     Close, Download, InsertDriveFile,
