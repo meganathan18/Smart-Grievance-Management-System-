@@ -13,7 +13,7 @@ import {
 import Layout from '../components/Layout';
 import { grievanceAPI } from '../services/api';
 import VoiceRecorder from '../components/VoiceRecorder';
-import axios from 'axios';
+
 import { useTranslation } from 'react-i18next';
 
 const categories = [

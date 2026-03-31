@@ -2,7 +2,6 @@ import React from 'react';
 import './i18n';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
-import { useTranslation } from 'react-i18next';
 
 // Pages
 import Login from './pages/Login';

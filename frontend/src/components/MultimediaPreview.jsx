@@ -2,11 +2,10 @@ import React, { useState } from 'react';
 import SecureAudioPlayer from './SecureAudioPlayer';
 import {
     Box, Typography, Paper, Dialog, DialogContent,
-    DialogTitle, Avatar, Stack, CircularProgress, IconButton, Tooltip
+    DialogTitle, Avatar, Stack, CircularProgress, IconButton
 } from '@mui/material';
 import {
-    Close, Download, InsertDriveFile,
-    GraphicEq, OpenInFull
+    Close, Download, InsertDriveFile, OpenInFull
 } from '@mui/icons-material';
 
 const MultimediaPreview = ({ files, voiceMessage }) => {

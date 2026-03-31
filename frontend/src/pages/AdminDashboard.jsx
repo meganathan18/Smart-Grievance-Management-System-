@@ -23,8 +23,9 @@ const AdminDashboard = () => {
     const [departments, setDepartments] = useState([]);
     const [users, setUsers] = useState([]);
     const [grievances, setGrievances] = useState([]);
-    const [userDialog, setUserDialog] = useState({ open: false, user: null });
-    const [deptDialog, setDeptDialog] = useState({ open: false, dept: null });
+    const [, setUserDialog] = useState({ open: false, user: null });
+    const [, setDeptDialog] = useState({ open: false, dept: null });
+
 
     const fetchData = React.useCallback(async () => {
         setLoading(true);
