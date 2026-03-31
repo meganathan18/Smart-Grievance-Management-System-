@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import SecureAudioPlayer from './SecureAudioPlayer';
 import {
     Box, Typography, Paper, Dialog, DialogContent,
-    DialogTitle, Avatar, Stack, CircularProgress
+    DialogTitle, Avatar, Stack, CircularProgress, IconButton, Tooltip
 } from '@mui/material';
 import {
     Close, Download, InsertDriveFile,
@@ -16,7 +16,7 @@ const MultimediaPreview = ({ files, voiceMessage }) => {
     const isAudio = (mimetype) => mimetype?.startsWith('audio/');
 
     const FileCard = ({ file, isVoice = false }) => {
-        const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
+        const API_URL = process.env.REACT_APP_API_URL || (process.env.NODE_ENV === 'production' ? 'https://smart-grievance-management-system.onrender.com/api' : 'http://localhost:5000/api');
         const fileUrl = file.url.startsWith('http') ? file.url : `${API_URL.replace('/api', '')}${file.url}`;
         const token = localStorage.getItem('token');
 

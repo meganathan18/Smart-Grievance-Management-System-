@@ -32,7 +32,7 @@ const LanguageSwitcher = () => {
         // Persist to backend if user is logged in
         const token = localStorage.getItem('token');
         if (token) {
-            const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
+            const API_URL = process.env.REACT_APP_API_URL || (process.env.NODE_ENV === 'production' ? 'https://smart-grievance-management-system.onrender.com/api' : 'http://localhost:5000/api');
             fetch(`${API_URL}/users/profile`, {
                 method: 'PUT',
                 headers: {

@@ -19,7 +19,7 @@ const SecureAudioPlayer = ({ file, isVoice = false }) => {
     const [objectUrl, setObjectUrl] = useState(null);
     const [error, setError] = useState(null);
 
-    const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
+    const API_URL = process.env.REACT_APP_API_URL || (process.env.NODE_ENV === 'production' ? 'https://smart-grievance-management-system.onrender.com/api' : 'http://localhost:5000/api');
     const fileUrl = file?.url ? (file.url.startsWith('http') ? file.url : `${API_URL.replace('/api', '')}${file.url}`) : null;
     const token = localStorage.getItem('token');
 
