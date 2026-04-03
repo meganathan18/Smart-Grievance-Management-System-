@@ -1,12 +1,12 @@
 const nodemailer = require('nodemailer');
 
 const createTransporter = () => {
-    // Forcing manual host and port 587 (STARTTLS) instead of 'service: gmail' (which uses port 465).
-    // Port 587 is more reliable across cloud providers like Render that may block port 465 or have IPv6 issues.
+    // Switching to Port 465 (SMTPS) as port 587 may be blocked in some regions on Render's network.
+    // Adding debug/logger to capture detailed connection steps in the hosted logs.
     return nodemailer.createTransport({
         host: 'smtp.gmail.com',
-        port: 587,
-        secure: false, // Use STARTTLS
+        port: 465,
+        secure: true, // Use SSL
         auth: {
             user: process.env.SMTP_USER,
             pass: process.env.SMTP_PASS
@@ -14,8 +14,10 @@ const createTransporter = () => {
         tls: {
             rejectUnauthorized: false
         },
-        connectionTimeout: 10000, // 10 seconds
-        greetingTimeout: 10000,   // 10 seconds
+        connectionTimeout: 20000, // 20 seconds
+        greetingTimeout: 20000,   // 20 seconds
+        debug: true,              // Enable debug output
+        logger: true              // Log to console
     });
 };
 
