@@ -9,7 +9,9 @@ const createTransporter = () => {
         auth: {
             user: process.env.SMTP_USER,
             pass: process.env.SMTP_PASS
-        }
+        },
+        connectionTimeout: 10000, // 10 seconds
+        greetingTimeout: 10000,   // 10 seconds
     } : {
         host,
         port: parseInt(process.env.SMTP_PORT) || 587,
@@ -20,7 +22,9 @@ const createTransporter = () => {
         },
         tls: {
             rejectUnauthorized: false
-        }
+        },
+        connectionTimeout: 10000,
+        greetingTimeout: 10000,
     };
 
     return nodemailer.createTransport(config);

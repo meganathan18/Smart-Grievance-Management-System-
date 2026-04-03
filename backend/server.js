@@ -7,7 +7,10 @@ const path = require('path');
 const multer = require('multer');
 
 // Fix Windows DNS issues (SRV/MongoDB Atlas + Gmail SMTP)
-require('dns').setServers(['8.8.8.8', '8.8.4.4']);
+// Fix Windows-specific DNS issues during local development (SRV/MongoDB + Gmail)
+if (process.platform === 'win32' || process.env.NODE_ENV !== 'production') {
+    require('dns').setServers(['8.8.8.8', '8.8.4.4']);
+}
 
 dotenv.config();
 
