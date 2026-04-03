@@ -6,18 +6,30 @@ const morgan = require('morgan');
 const path = require('path');
 const multer = require('multer');
 
+// Fix Windows DNS issues (SRV/MongoDB Atlas + Gmail SMTP)
+require('dns').setServers(['8.8.8.8', '8.8.4.4']);
+
 dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-// Multer setup for handling file uploads
-const storage = multer.diskStorage({
-    destination: (req, file, cb) => cb(null, 'uploads/'),
-    filename: (req, file, cb) => {
-        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-        cb(null, uniqueSuffix + path.extname(file.originalname));
-    }
+const { CloudinaryStorage } = require('multer-storage-cloudinary');
+const cloudinary = require('cloudinary').v2;
+
+cloudinary.config({
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET
+});
+
+const storage = new CloudinaryStorage({
+    cloudinary: cloudinary,
+    params: {
+        folder: 'smart_grievance',
+        resource_type: 'auto', // Important to support audio/video/raw
+        allowed_formats: ['jpg', 'png', 'jpeg', 'gif', 'mp3', 'wav', 'webm', 'ogg', 'pdf', 'doc', 'docx']
+    },
 });
 
 const fileFilter = (req, file, cb) => {
@@ -48,6 +60,8 @@ const uploadFields = upload.fields([
 const User = require('./models/User');
 const Grievance = require('./models/Grievance');
 const Department = require('./models/Department');
+const { sendOTPEmail, sendStatusUpdateEmail, sendRegistrationOTPEmail } = require('./services/emailService');
+const { analyzeGrievance } = require('./services/aiService');
 
 // Middleware
 app.use(cors());
@@ -119,7 +133,9 @@ const initializeData = async () => {
             await Department.create([
                 { name: 'Water Department', code: 'WAT', categories: ['water_supply'] },
                 { name: 'Electricity Board', code: 'ELE', categories: ['electricity'] },
-                { name: 'Public Works (Roads)', code: 'PWR', categories: ['roads'] }
+                { name: 'Public Works (Roads)', code: 'PWR', categories: ['roads'] },
+                { name: 'Sanitation Dept', code: 'SAN', categories: ['sanitation'] },
+                { name: 'Public Transport', code: 'TRA', categories: ['public_transport'] }
             ]);
             console.log('Seeded departments');
         }
@@ -128,7 +144,90 @@ const initializeData = async () => {
     }
 };
 
+// Temporary in-memory store for pending registrations (OTP not yet verified)
+const pendingRegistrations = new Map();
+
 // Auth Routes
+// Step 1: Request registration OTP
+app.post('/api/auth/register-request', async (req, res) => {
+    const { name, email, password, phone } = req.body;
+    try {
+        if (!name || !email || !password) {
+            return res.status(400).json({ message: 'Name, email, and password are required.' });
+        }
+
+        const existingUser = await User.findOne({ email });
+        if (existingUser) {
+            return res.status(400).json({ message: 'An account with this email already exists.' });
+        }
+
+        const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
+        const otpExpiry = Date.now() + 10 * 60 * 1000; // 10 minutes
+
+        pendingRegistrations.set(email, { name, email, password, phone, otpCode, otpExpiry });
+
+        const emailSent = await sendRegistrationOTPEmail(email, otpCode, name);
+        if (!emailSent) {
+            return res.status(500).json({ message: 'Failed to send verification email. Please check your email configuration.' });
+        }
+
+        res.json({ success: true, message: 'Verification OTP sent to your email.' });
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+});
+
+// Step 2: Verify OTP and create account
+app.post('/api/auth/register-verify', async (req, res) => {
+    const { email, otp } = req.body;
+    try {
+        const pending = pendingRegistrations.get(email);
+
+        if (!pending) {
+            return res.status(400).json({ message: 'No pending registration found. Please request OTP again.' });
+        }
+        if (pending.otpCode !== otp) {
+            return res.status(400).json({ message: 'Invalid OTP. Please try again.' });
+        }
+        if (Date.now() > pending.otpExpiry) {
+            pendingRegistrations.delete(email);
+            return res.status(400).json({ message: 'OTP has expired. Please request a new one.' });
+        }
+
+        // Double-check no account was created in the meantime
+        const existingUser = await User.findOne({ email });
+        if (existingUser) {
+            pendingRegistrations.delete(email);
+            return res.status(400).json({ message: 'An account with this email already exists.' });
+        }
+
+        const newUser = await User.create({
+            name: pending.name,
+            email: pending.email,
+            password: pending.password,
+            phone: pending.phone,
+            role: 'citizen',
+            language: 'en'
+        });
+
+        pendingRegistrations.delete(email);
+
+        res.json({
+            token: 'mock-jwt-token-' + newUser._id,
+            user: {
+                id: newUser._id,
+                name: newUser.name,
+                email: newUser.email,
+                role: newUser.role,
+                language: newUser.language
+            }
+        });
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+});
+
+// Legacy register (no OTP — kept for backward compatibility)
 app.post('/api/auth/register', async (req, res) => {
     const { name, email, password, phone } = req.body;
 
@@ -141,7 +240,7 @@ app.post('/api/auth/register', async (req, res) => {
         const newUser = await User.create({
             name,
             email,
-            password, // In a real app, this would be hashed
+            password,
             phone,
             role: 'citizen',
             language: 'en'
@@ -169,6 +268,33 @@ app.post('/api/auth/login', async (req, res) => {
         if (!user) {
             return res.status(401).json({ message: 'Invalid credentials' });
         }
+
+        res.json({
+            token: 'mock-jwt-token-' + user._id,
+            user: {
+                id: user._id,
+                name: user.name,
+                email: user.email,
+                role: user.role,
+                language: user.language
+            }
+        });
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+});
+
+app.post('/api/auth/verify-otp', async (req, res) => {
+    const { email, otp } = req.body;
+    try {
+        const user = await User.findOne({ email });
+        if (!user || user.otpCode !== otp || !user.otpExpiry || user.otpExpiry < new Date()) {
+            return res.status(401).json({ message: 'Invalid or expired OTP' });
+        }
+
+        user.otpCode = null;
+        user.otpExpiry = null;
+        await user.save();
 
         res.json({
             token: 'mock-jwt-token-' + user._id,
@@ -220,7 +346,7 @@ const formatFile = (file) => ({
     filename: file.filename,
     mimetype: file.mimetype,
     size: file.size,
-    url: `/api/uploads/${file.filename}`
+    url: file.path // Cloudinary direct URL
 });
 
 app.post('/api/grievances', authenticateToken, uploadFields, async (req, res) => {
@@ -236,6 +362,9 @@ app.post('/api/grievances', authenticateToken, uploadFields, async (req, res) =>
 
     // Sanitize coordinates to prevent Mongoose cast errors
     if (location) {
+        if (!location.address || !location.city) {
+            return res.status(400).json({ message: 'Location address and city are mandatory.' });
+        }
         if (location.latitude === 'null' || location.latitude === '') location.latitude = null;
         if (location.longitude === 'null' || location.longitude === '') location.longitude = null;
 
@@ -260,17 +389,33 @@ app.post('/api/grievances', authenticateToken, uploadFields, async (req, res) =>
     const directVoiceFile = req.files['voice'] ? formatFile(req.files['voice'][0]) : null;
 
     try {
+        // AI Analysis
+        const aiResults = analyzeGrievance(title, description);
+        
+        // Auto-assign if "Let AI Suggest" (empty string) or "other" is selected
+        const finalCategory = (category === '' || category === 'other') ? aiResults.suggestedCategory : category;
+        
+        // Auto-elevate priority if AI suggests a higher urgency than 'normal'
+        // or if user selected "Let AI Suggest" (empty string)
+        let finalPriority = priority || '';
+        if (finalPriority === '' || (finalPriority === 'normal' && (aiResults.suggestedPriority === 'high' || aiResults.suggestedPriority === 'urgent'))) {
+            finalPriority = (finalPriority === '') ? aiResults.suggestedPriority : finalPriority;
+        }
+        // Ensure we always have a valid priority
+        if (finalPriority === '') finalPriority = 'normal';
+
         const newGrievance = await Grievance.create({
             trackingId: 'SGMS-' + Math.random().toString(36).substr(2, 9).toUpperCase(),
             title,
             description,
-            category: category || 'General',
+            category: finalCategory || 'other',
             location,
             status: 'pending',
-            priority: priority || 'normal',
+            priority: finalPriority,
             attachments,
             voiceMessage: directVoiceFile || voiceMessage,
-            citizen: req.user.id
+            citizen: req.user.id,
+            aiAnalysis: aiResults
         });
 
         res.status(201).json({ grievance: newGrievance });
@@ -337,7 +482,7 @@ app.get('/api/grievances/track/:trackingId', async (req, res) => {
 app.put('/api/grievances/:id/status', authenticateToken, async (req, res) => {
     const { status, note } = req.body;
     try {
-        const grievance = await Grievance.findById(req.params.id);
+        const grievance = await Grievance.findById(req.params.id).populate('citizen', 'name email');
         if (!grievance) return res.status(404).json({ message: 'Grievance not found' });
 
         grievance.status = status;
@@ -348,6 +493,19 @@ app.put('/api/grievances/:id/status', authenticateToken, async (req, res) => {
             });
         }
         await grievance.save();
+
+        // Send email notification to citizen
+        if (grievance.citizen && grievance.citizen.email) {
+            sendStatusUpdateEmail(
+                grievance.citizen.email,
+                grievance.trackingId,
+                status,
+                grievance.citizen.name,
+                note || '',
+                grievance.title
+            ).catch(err => console.error('Email notification failed:', err));
+        }
+
         res.json({ grievance });
     } catch (error) {
         res.status(500).json({ message: error.message });
@@ -373,12 +531,25 @@ app.post('/api/grievances/:id/comments', authenticateToken, async (req, res) => 
 
 app.post('/api/grievances/:id/escalate', authenticateToken, async (req, res) => {
     try {
-        const grievance = await Grievance.findById(req.params.id);
+        const grievance = await Grievance.findById(req.params.id).populate('citizen', 'name email');
         if (!grievance) return res.status(404).json({ message: 'Grievance not found' });
 
         grievance.status = 'escalated';
         grievance.priority = 'urgent';
         await grievance.save();
+
+        // Notify citizen about escalation
+        if (grievance.citizen && grievance.citizen.email) {
+            sendStatusUpdateEmail(
+                grievance.citizen.email,
+                grievance.trackingId,
+                'escalated',
+                grievance.citizen.name,
+                'Your grievance has been escalated for urgent attention.',
+                grievance.title
+            ).catch(err => console.error('Escalation email failed:', err));
+        }
+
         res.json({ grievance });
     } catch (error) {
         res.status(500).json({ message: error.message });
@@ -388,12 +559,25 @@ app.post('/api/grievances/:id/escalate', authenticateToken, async (req, res) => 
 app.post('/api/grievances/:id/feedback', authenticateToken, async (req, res) => {
     const { satisfaction, feedback } = req.body;
     try {
-        const grievance = await Grievance.findById(req.params.id);
+        const grievance = await Grievance.findById(req.params.id).populate('citizen', 'name email');
         if (!grievance) return res.status(404).json({ message: 'Grievance not found' });
 
         grievance.resolution = { satisfaction, feedback };
         grievance.status = 'closed';
         await grievance.save();
+
+        // Notify citizen that grievance is closed
+        if (grievance.citizen && grievance.citizen.email) {
+            sendStatusUpdateEmail(
+                grievance.citizen.email,
+                grievance.trackingId,
+                'closed',
+                grievance.citizen.name,
+                'Thank you for your feedback. Your grievance has been closed.',
+                grievance.title
+            ).catch(err => console.error('Closure email failed:', err));
+        }
+
         res.json({ grievance });
     } catch (error) {
         res.status(500).json({ message: error.message });

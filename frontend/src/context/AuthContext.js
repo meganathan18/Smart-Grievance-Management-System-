@@ -54,6 +54,21 @@ export const AuthProvider = ({ children }) => {
         return userData;
     };
 
+    const verifyOtp = async (email, otp) => {
+        const response = await api.post('/auth/verify-otp', { email, otp });
+        const { token: newToken, user: userData } = response.data;
+
+        localStorage.setItem('token', newToken);
+        setToken(newToken);
+        setUser(userData);
+
+        if (userData.language) {
+            i18n.changeLanguage(userData.language);
+        }
+
+        return userData;
+    };
+
     const register = async (userData) => {
         const response = await api.post('/auth/register', userData);
         const { token: newToken, user: newUser } = response.data;
@@ -61,6 +76,28 @@ export const AuthProvider = ({ children }) => {
         localStorage.setItem('token', newToken);
         setToken(newToken);
         setUser(newUser);
+
+        return newUser;
+    };
+
+    const registerRequest = async (userData) => {
+        // Step 1: Send OTP to email without creating account yet
+        const response = await api.post('/auth/register-request', userData);
+        return response.data; // { success: true, message: '...' }
+    };
+
+    const registerVerify = async (email, otp) => {
+        // Step 2: Verify OTP and create the account
+        const response = await api.post('/auth/register-verify', { email, otp });
+        const { token: newToken, user: newUser } = response.data;
+
+        localStorage.setItem('token', newToken);
+        setToken(newToken);
+        setUser(newUser);
+
+        if (newUser.language) {
+            i18n.changeLanguage(newUser.language);
+        }
 
         return newUser;
     };
@@ -83,7 +120,10 @@ export const AuthProvider = ({ children }) => {
         loading,
         isAuthenticated: !!user,
         login,
+        verifyOtp,
         register,
+        registerRequest,
+        registerVerify,
         logout,
         updateProfile,
     };

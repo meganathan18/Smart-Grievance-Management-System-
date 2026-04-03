@@ -51,7 +51,7 @@ const SubmitGrievance = () => {
         title: '',
         description: '',
         category: '',
-        priority: 'normal',
+        priority: '',
         location: {
             address: '',
             city: '',
@@ -162,8 +162,8 @@ const SubmitGrievance = () => {
     const handleSubmit = async (e) => {
         e.preventDefault();
 
-        if (!formData.title || !formData.description) {
-            setError('Please fill in all required fields');
+        if (!formData.title || !formData.description || !formData.location.address || !formData.location.city) {
+            setError(t('citizen.formIncomplete', 'Please fill in all required fields, including location address and city.'));
             return;
         }
 
@@ -273,7 +273,7 @@ const SubmitGrievance = () => {
                                     </Typography>
                                 </Grid>
 
-                                <Grid item xs={12} sm={6}>
+                                <Grid item xs={12}>
                                     <FormControl fullWidth>
                                         <InputLabel>{t('citizen.formCategory')}</InputLabel>
                                         <Select
@@ -293,25 +293,6 @@ const SubmitGrievance = () => {
                                     </FormControl>
                                 </Grid>
 
-                                <Grid item xs={12} sm={6}>
-                                    <FormControl fullWidth required>
-                                        <InputLabel>{t('common.priority')}</InputLabel>
-                                        <Select
-                                            name="priority"
-                                            value={formData.priority}
-                                            label={t('common.priority')}
-                                            onChange={handleChange}
-                                            startAdornment={<PriorityHigh color="action" sx={{ mr: 1 }} />}
-                                        >
-                                            {priorities.map((p) => (
-                                                <MenuItem key={p.value} value={p.value}>
-                                                    {t(`common.${p.value}`, p.label)}
-                                                </MenuItem>
-                                            ))}
-                                        </Select>
-                                    </FormControl>
-                                </Grid>
-
 
                                 <Grid item xs={12}>
                                     <Divider sx={{ my: 1 }}>
@@ -323,9 +304,10 @@ const SubmitGrievance = () => {
                                     <TextField
                                         fullWidth
                                         name="location.address"
-                                        label={t('common.location')}
+                                        label={t('common.location') + " *"}
                                         value={formData.location.address}
                                         onChange={handleChange}
+                                        required
                                         placeholder={t('citizen.formLocationPlaceholder', 'Street address or area name')}
                                         InputProps={{
                                             startAdornment: <LocationOn color="action" sx={{ mr: 1 }} />,
@@ -337,9 +319,10 @@ const SubmitGrievance = () => {
                                     <TextField
                                         fullWidth
                                         name="location.city"
-                                        label="City"
+                                        label="City *"
                                         value={formData.location.city}
                                         onChange={handleChange}
+                                        required
                                     />
                                 </Grid>
 

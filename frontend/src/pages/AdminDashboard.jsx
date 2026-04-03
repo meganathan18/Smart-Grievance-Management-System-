@@ -189,6 +189,7 @@ const AdminDashboard = () => {
                             <TableRow sx={{ bgcolor: 'grey.50' }}>
                                 <TableCell>Tracking ID</TableCell>
                                 <TableCell>Title</TableCell>
+                                <TableCell>Category</TableCell>
                                 <TableCell>Citizen</TableCell>
                                 <TableCell>Department</TableCell>
                                 <TableCell>Priority</TableCell>
@@ -201,6 +202,14 @@ const AdminDashboard = () => {
                                 <TableRow key={g._id} hover sx={{ cursor: 'pointer' }} onClick={() => navigate(`/grievance/${g._id}`)}>
                                     <TableCell><Typography variant="body2" sx={{ fontFamily: 'monospace' }}>{g.trackingId}</Typography></TableCell>
                                     <TableCell>{g.title?.substring(0, 40)}...</TableCell>
+                                    <TableCell>
+                                        <Chip 
+                                            label={g.category?.replace(/_/g, ' ')} 
+                                            size="small" 
+                                            variant="outlined" 
+                                            sx={{ textTransform: 'capitalize' }} 
+                                        />
+                                    </TableCell>
                                     <TableCell>{g.citizen?.name}</TableCell>
                                     <TableCell>{g.department?.name || 'Unassigned'}</TableCell>
                                     <TableCell><Chip label={g.priority} size="small" color={g.priority === 'urgent' ? 'error' : g.priority === 'high' ? 'warning' : 'default'} /></TableCell>

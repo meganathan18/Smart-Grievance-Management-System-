@@ -32,6 +32,11 @@ const SecureAudioPlayer = ({ file, isVoice = false }) => {
         let currentUrl = null;
         const fetchFile = async () => {
             try {
+                if (fileUrl.includes('cloudinary.com')) {
+                    setObjectUrl(fileUrl);
+                    setLoading(false);
+                    return;
+                }
                 const response = await fetch(fileUrl, {
                     headers: { 'Authorization': `Bearer ${token}` }
                 });

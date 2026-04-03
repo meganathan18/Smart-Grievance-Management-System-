@@ -209,6 +209,7 @@ const OfficerDashboard = () => {
                                 <TableRow sx={{ bgcolor: 'grey.50' }}>
                                     <TableCell sx={{ fontWeight: 600 }}>{t('common.trackingId')}</TableCell>
                                     <TableCell sx={{ fontWeight: 600 }}>{t('common.title')}</TableCell>
+                                    <TableCell sx={{ fontWeight: 600 }}>{t('common.category')}</TableCell>
                                     <TableCell sx={{ fontWeight: 600 }}>{t('officer.citizen')}</TableCell>
                                     <TableCell sx={{ fontWeight: 600 }}>{t('common.priority')}</TableCell>
                                     <TableCell sx={{ fontWeight: 600 }}>{t('common.status')}</TableCell>
@@ -235,6 +236,14 @@ const OfficerDashboard = () => {
                                                 <Typography variant="body2" sx={{ maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                                                     {g.title}
                                                 </Typography>
+                                            </TableCell>
+                                            <TableCell>
+                                                <Chip 
+                                                    label={t(`categories.${g.category}`, g.category?.replace(/_/g, ' '))} 
+                                                    size="small" 
+                                                    variant="outlined" 
+                                                    sx={{ textTransform: 'capitalize' }} 
+                                                />
                                             </TableCell>
                                             <TableCell>{g.citizen?.name || 'N/A'}</TableCell>
                                             <TableCell>
