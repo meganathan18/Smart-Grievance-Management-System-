@@ -166,9 +166,13 @@ app.post('/api/auth/register-request', async (req, res) => {
 
         pendingRegistrations.set(email, { name, email, password, phone, otpCode, otpExpiry });
 
-        const emailSent = await sendRegistrationOTPEmail(email, otpCode, name);
-        if (!emailSent) {
-            return res.status(500).json({ message: 'Failed to send verification email. Please check your email configuration.' });
+        const emailResult = await sendRegistrationOTPEmail(email, otpCode, name);
+        if (!emailResult.success) {
+            return res.status(500).json({ 
+                message: 'Failed to send verification email.',
+                error: emailResult.error,
+                suggestion: 'Please verify your SMTP configuration and ensure App Passwords are correct.'
+            });
         }
 
         res.json({ success: true, message: 'Verification OTP sent to your email.' });
@@ -503,7 +507,9 @@ app.put('/api/grievances/:id/status', authenticateToken, async (req, res) => {
                 grievance.citizen.name,
                 note || '',
                 grievance.title
-            ).catch(err => console.error('Email notification failed:', err));
+            ).then(res => {
+                if (!res.success) console.error('Email notification failed:', res.error);
+            }).catch(err => console.error('Email notification failed:', err));
         }
 
         res.json({ grievance });

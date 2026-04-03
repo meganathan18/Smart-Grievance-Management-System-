@@ -96,7 +96,11 @@ const Register = () => {
             setStep(2);
             setSuccess(`A 6-digit verification code was sent to ${formData.email}`);
         } catch (err) {
-            setError(err.response?.data?.message || 'Failed to send verification email.');
+            setError(
+                err.response?.data?.error 
+                ? `${err.response.data.message}: ${err.response.data.error}`
+                : err.response?.data?.message || 'Failed to send verification email.'
+            );
         } finally {
             setLoading(false);
         }

@@ -4,7 +4,13 @@ const createTransporter = () => {
     const host = process.env.SMTP_HOST || 'smtp.gmail.com';
     const isGmail = host.includes('gmail');
 
-    return nodemailer.createTransport({
+    const config = isGmail ? {
+        service: 'gmail',
+        auth: {
+            user: process.env.SMTP_USER,
+            pass: process.env.SMTP_PASS
+        }
+    } : {
         host,
         port: parseInt(process.env.SMTP_PORT) || 587,
         secure: false, // Use STARTTLS
@@ -15,7 +21,9 @@ const createTransporter = () => {
         tls: {
             rejectUnauthorized: false
         }
-    });
+    };
+
+    return nodemailer.createTransport(config);
 };
 
 const sendRegistrationOTPEmail = async (to, otp, name) => {
@@ -56,10 +64,15 @@ const sendRegistrationOTPEmail = async (to, otp, name) => {
 
         const info = await transporter.sendMail(mailOptions);
         console.log('Registration OTP email sent: %s', info.messageId);
-        return true;
+        return { success: true };
     } catch (error) {
-        console.error('Error sending registration OTP email:', error);
-        return false;
+        console.error('Error sending registration OTP email:', {
+            message: error.message,
+            code: error.code,
+            command: error.command,
+            response: error.response
+        });
+        return { success: false, error: error.message };
     }
 };
 
@@ -101,10 +114,13 @@ const sendOTPEmail = async (to, otp) => {
 
         const info = await transporter.sendMail(mailOptions);
         console.log('OTP Email sent: %s', info.messageId);
-        return true;
+        return { success: true };
     } catch (error) {
-        console.error('Error sending OTP email:', error);
-        return false;
+        console.error('Error sending OTP email:', {
+            message: error.message,
+            code: error.code
+        });
+        return { success: false, error: error.message };
     }
 };
 
@@ -190,10 +206,13 @@ const sendStatusUpdateEmail = async (to, trackingId, newStatus, citizenName = ''
 
         const info = await transporter.sendMail(mailOptions);
         console.log('Status update email sent to %s: %s', to, info.messageId);
-        return true;
+        return { success: true };
     } catch (error) {
-        console.error('Error sending status update email:', error);
-        return false;
+        console.error('Error sending status update email:', {
+            message: error.message,
+            code: error.code
+        });
+        return { success: false, error: error.message };
     }
 };
 
