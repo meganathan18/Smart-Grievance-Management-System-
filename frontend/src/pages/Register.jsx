@@ -7,7 +7,7 @@ import {
 } from '@mui/material';
 import {
     Visibility, VisibilityOff, Email, Lock, Person, Phone,
-    PersonAdd, VerifiedUser, ArrowBack, Refresh
+    VerifiedUser, ArrowBack, Refresh
 } from '@mui/icons-material';
 import { useAuth } from '../context/AuthContext';
 import { useTranslation } from 'react-i18next';
@@ -15,7 +15,7 @@ import { useTranslation } from 'react-i18next';
 const OTP_EXPIRY_SECONDS = 600; // 10 minutes
 
 const Register = () => {
-    const { t } = useTranslation();
+    useTranslation();
     const navigate = useNavigate();
     const { registerRequest, registerVerify } = useAuth();
 

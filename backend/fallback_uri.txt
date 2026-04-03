@@ -1,0 +1,3 @@
+ac-ig0ptek-shard-00-02.kfgrwjt.mongodb.net
+ac-ig0ptek-shard-00-00.kfgrwjt.mongodb.net
+ac-ig0ptek-shard-00-01.kfgrwjt.mongodb.net

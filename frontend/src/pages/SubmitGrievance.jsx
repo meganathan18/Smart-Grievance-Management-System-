@@ -8,7 +8,7 @@ import {
 } from '@mui/material';
 import {
     Send, AttachFile, Delete, CloudUpload, CheckCircle,
-    Category, LocationOn, Title, PriorityHigh, GraphicEq
+    Category, LocationOn, Title, GraphicEq
 } from '@mui/icons-material';
 import Layout from '../components/Layout';
 import { grievanceAPI } from '../services/api';
@@ -31,11 +31,7 @@ const categories = [
     { value: 'other', label: 'Other' },
 ];
 
-const priorities = [
-    { value: 'normal', label: 'Normal' },
-    { value: 'medium', label: 'Medium' },
-    { value: 'urgent', label: 'Urgent' },
-];
+
 
 const SubmitGrievance = () => {
     const { t } = useTranslation();
