@@ -1,20 +1,11 @@
 const nodemailer = require('nodemailer');
 
 const createTransporter = () => {
-    const host = process.env.SMTP_HOST || 'smtp.gmail.com';
-    const isGmail = host.includes('gmail');
-
-    const config = isGmail ? {
-        service: 'gmail',
-        auth: {
-            user: process.env.SMTP_USER,
-            pass: process.env.SMTP_PASS
-        },
-        connectionTimeout: 10000, // 10 seconds
-        greetingTimeout: 10000,   // 10 seconds
-    } : {
-        host,
-        port: parseInt(process.env.SMTP_PORT) || 587,
+    // Forcing manual host and port 587 (STARTTLS) instead of 'service: gmail' (which uses port 465).
+    // Port 587 is more reliable across cloud providers like Render that may block port 465 or have IPv6 issues.
+    return nodemailer.createTransport({
+        host: 'smtp.gmail.com',
+        port: 587,
         secure: false, // Use STARTTLS
         auth: {
             user: process.env.SMTP_USER,
@@ -23,11 +14,9 @@ const createTransporter = () => {
         tls: {
             rejectUnauthorized: false
         },
-        connectionTimeout: 10000,
-        greetingTimeout: 10000,
-    };
-
-    return nodemailer.createTransport(config);
+        connectionTimeout: 10000, // 10 seconds
+        greetingTimeout: 10000,   // 10 seconds
+    });
 };
 
 const sendRegistrationOTPEmail = async (to, otp, name) => {
