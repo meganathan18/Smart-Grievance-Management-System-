@@ -1,5 +1,5 @@
 const { Resend } = require('resend');
-const resend = new Resend(process.env.RESEND_API_KEY);
+const resend = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KEY) : null;
 
 // Important: Resend free tier requires sending from onboarding@resend.dev
 // Unless you verify a custom domain, you must use this address.
@@ -7,6 +7,10 @@ const getFromAddress = () => `Smart Grievance System <onboarding@resend.dev>`;
 
 const sendRegistrationOTPEmail = async (to, otp, name) => {
     try {
+        if (!resend) {
+            console.error('RESEND_API_KEY is missing. Email not sent.');
+            return { success: false, error: 'Email configuration missing.' };
+        }
         const data = await resend.emails.send({
             from: getFromAddress(),
             to,
@@ -55,6 +59,10 @@ const sendRegistrationOTPEmail = async (to, otp, name) => {
 
 const sendOTPEmail = async (to, otp) => {
     try {
+        if (!resend) {
+            console.error('RESEND_API_KEY is missing. Email not sent.');
+            return { success: false, error: 'Email configuration missing.' };
+        }
         const data = await resend.emails.send({
             from: getFromAddress(),
             to,
@@ -121,6 +129,11 @@ const sendStatusUpdateEmail = async (to, trackingId, newStatus, citizenName = ''
             </div>` : '';
 
         const titleSection = grievanceTitle ? `<p style="font-size: 14px; color: #888; text-align: center; margin-top: -12px; margin-bottom: 24px;">📄 ${grievanceTitle}</p>` : '';
+
+        if (!resend) {
+            console.error('RESEND_API_KEY is missing. Email not sent.');
+            return { success: false, error: 'Email configuration missing.' };
+        }
 
         const data = await resend.emails.send({
             from: getFromAddress(),
