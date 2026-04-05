@@ -112,16 +112,16 @@ app.get('/', (req, res) => {
     res.send('Smart Grievance API is running...');
 });
 
-// Diagnostics Route for Email (Resend) connectivity
+// Diagnostics Route for Email (Vercel API) connectivity
 app.get('/api/diag/email-test', async (req, res) => {
     try {
-        if (!process.env.RESEND_API_KEY) {
-            throw new Error("RESEND_API_KEY is missing");
+        if (!process.env.INTERNAL_API_SECRET) {
+            throw new Error("INTERNAL_API_SECRET is missing");
         }
         res.json({ 
             success: true, 
-            message: 'Resend API key is configured.',
-            config: { provider: 'Resend' }
+            message: 'Vercel connectivity parameters configured.',
+            config: { provider: 'Vercel Serverless Functions' }
         });
     } catch (error) {
         console.error('Email diagnostics failed:', error);
