@@ -12,6 +12,14 @@ if (process.platform === 'win32' || process.env.NODE_ENV !== 'production') {
     require('dns').setServers(['8.8.8.8', '8.8.4.4']);
 }
 
+// Force IPv4 preference for Node.js DNS resolution.
+// This is a common fix for "Connection timeout" on platforms like Render where
+// smtp.gmail.com might resolve to an unreachable IPv6 address.
+const dns = require('dns');
+if (dns.setDefaultResultOrder) {
+    dns.setDefaultResultOrder('ipv4first');
+}
+
 dotenv.config();
 
 const app = express();
@@ -102,6 +110,36 @@ app.get('/api/uploads/:filename', authenticateToken, (req, res) => {
 // Basic Route for testing
 app.get('/', (req, res) => {
     res.send('Smart Grievance API is running...');
+});
+
+// Diagnostics Route for Email (SMTP) connectivity
+app.get('/api/diag/email-test', async (req, res) => {
+    const { createTransporter } = require('./services/emailService');
+    const transporter = createTransporter();
+    try {
+        console.log('Starting SMTP diagnostics...');
+        await transporter.verify();
+        res.json({ 
+            success: true, 
+            message: 'SMTP connection verified successfully!',
+            config: {
+                host: transporter.options.host,
+                port: transporter.options.port,
+                user: transporter.options.auth.user ? '***' : 'MISSING'
+            }
+        });
+    } catch (error) {
+        console.error('SMTP diagnostics failed:', error);
+        res.status(500).json({ 
+            success: false, 
+            message: 'SMTP verification failed.',
+            error: error.message,
+            code: error.code,
+            command: error.command,
+            response: error.response,
+            stack: error.stack
+        });
+    }
 });
 
 // Seed data function

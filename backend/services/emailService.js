@@ -3,23 +3,30 @@ const nodemailer = require('nodemailer');
 const createTransporter = () => {
     // Switching to Port 465 (SMTPS) as port 587 may be blocked in some regions on Render's network.
     // Adding debug/logger to capture detailed connection steps in the hosted logs.
+    // pool: true is used to keep connections open and prevent reconnecting overhead.
     return nodemailer.createTransport({
         host: 'smtp.gmail.com',
         port: 465,
         secure: true, // Use SSL
+        pool: true,   // Use connection pool
+        maxConnections: 5,
+        maxMessages: 100,
         auth: {
             user: process.env.SMTP_USER,
             pass: process.env.SMTP_PASS
         },
         tls: {
-            rejectUnauthorized: false
+            rejectUnauthorized: false,
+            minVersion: 'TLSv1.2' // Ensure at least TLSv1.2 for modern security
         },
         connectionTimeout: 20000, // 20 seconds
         greetingTimeout: 20000,   // 20 seconds
+        family: 4,                // Force IPv4 resolution to prevent IPv6 timeouts on Render/Vercel
         debug: true,              // Enable debug output
         logger: true              // Log to console
     });
 };
+
 
 const sendRegistrationOTPEmail = async (to, otp, name) => {
     const transporter = createTransporter();
@@ -212,6 +219,7 @@ const sendStatusUpdateEmail = async (to, trackingId, newStatus, citizenName = ''
 };
 
 module.exports = {
+    createTransporter,
     sendRegistrationOTPEmail,
     sendOTPEmail,
     sendStatusUpdateEmail
