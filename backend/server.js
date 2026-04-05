@@ -112,32 +112,23 @@ app.get('/', (req, res) => {
     res.send('Smart Grievance API is running...');
 });
 
-// Diagnostics Route for Email (SMTP) connectivity
+// Diagnostics Route for Email (Resend) connectivity
 app.get('/api/diag/email-test', async (req, res) => {
-    const { createTransporter } = require('./services/emailService');
-    const transporter = createTransporter();
     try {
-        console.log('Starting SMTP diagnostics...');
-        await transporter.verify();
+        if (!process.env.RESEND_API_KEY) {
+            throw new Error("RESEND_API_KEY is missing");
+        }
         res.json({ 
             success: true, 
-            message: 'SMTP connection verified successfully!',
-            config: {
-                host: transporter.options.host,
-                port: transporter.options.port,
-                user: transporter.options.auth.user ? '***' : 'MISSING'
-            }
+            message: 'Resend API key is configured.',
+            config: { provider: 'Resend' }
         });
     } catch (error) {
-        console.error('SMTP diagnostics failed:', error);
+        console.error('Email diagnostics failed:', error);
         res.status(500).json({ 
             success: false, 
-            message: 'SMTP verification failed.',
-            error: error.message,
-            code: error.code,
-            command: error.command,
-            response: error.response,
-            stack: error.stack
+            message: 'Email API configuration missing.',
+            error: error.message
         });
     }
 });

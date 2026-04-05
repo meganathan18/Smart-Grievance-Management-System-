@@ -1,38 +1,14 @@
-const nodemailer = require('nodemailer');
+const { Resend } = require('resend');
+const resend = new Resend(process.env.RESEND_API_KEY);
 
-const createTransporter = () => {
-    // Switching to Port 465 (SMTPS) as port 587 may be blocked in some regions on Render's network.
-    // Adding debug/logger to capture detailed connection steps in the hosted logs.
-    // pool: true is used to keep connections open and prevent reconnecting overhead.
-    return nodemailer.createTransport({
-        host: 'smtp.gmail.com',
-        port: 465,
-        secure: true, // Use SSL
-        pool: true,   // Use connection pool
-        maxConnections: 5,
-        maxMessages: 100,
-        auth: {
-            user: process.env.SMTP_USER,
-            pass: process.env.SMTP_PASS
-        },
-        tls: {
-            rejectUnauthorized: false,
-            minVersion: 'TLSv1.2' // Ensure at least TLSv1.2 for modern security
-        },
-        connectionTimeout: 20000, // 20 seconds
-        greetingTimeout: 20000,   // 20 seconds
-        family: 4,                // Force IPv4 resolution to prevent IPv6 timeouts on Render/Vercel
-        debug: true,              // Enable debug output
-        logger: true              // Log to console
-    });
-};
-
+// Important: Resend free tier requires sending from onboarding@resend.dev
+// Unless you verify a custom domain, you must use this address.
+const getFromAddress = () => `Smart Grievance System <onboarding@resend.dev>`;
 
 const sendRegistrationOTPEmail = async (to, otp, name) => {
-    const transporter = createTransporter();
     try {
-        const mailOptions = {
-            from: `"Smart Grievance System" <${process.env.SMTP_FROM || process.env.SMTP_USER}>`,
+        const data = await resend.emails.send({
+            from: getFromAddress(),
             to,
             subject: 'Verify Your Email – Smart Grievance System',
             html: `
@@ -62,27 +38,25 @@ const sendRegistrationOTPEmail = async (to, otp, name) => {
                     </div>
                 </div>
             `
-        };
+        });
 
-        const info = await transporter.sendMail(mailOptions);
-        console.log('Registration OTP email sent: %s', info.messageId);
+        if (data.error) {
+            console.error('Error sending registration OTP email:', data.error);
+            return { success: false, error: data.error.message };
+        }
+
+        console.log('Registration OTP email sent via Resend API');
         return { success: true };
     } catch (error) {
-        console.error('Error sending registration OTP email:', {
-            message: error.message,
-            code: error.code,
-            command: error.command,
-            response: error.response
-        });
+        console.error('Exception sending registration OTP email:', error);
         return { success: false, error: error.message };
     }
 };
 
 const sendOTPEmail = async (to, otp) => {
-    const transporter = createTransporter();
     try {
-        const mailOptions = {
-            from: `"Smart Grievance System" <${process.env.SMTP_FROM || process.env.SMTP_USER}>`,
+        const data = await resend.emails.send({
+            from: getFromAddress(),
             to,
             subject: 'Your Login OTP – Smart Grievance System',
             html: `
@@ -112,22 +86,22 @@ const sendOTPEmail = async (to, otp) => {
                     </div>
                 </div>
             `
-        };
+        });
 
-        const info = await transporter.sendMail(mailOptions);
-        console.log('OTP Email sent: %s', info.messageId);
+        if (data.error) {
+            console.error('Error sending OTP email:', data.error);
+            return { success: false, error: data.error.message };
+        }
+
+        console.log('OTP Email sent via Resend API');
         return { success: true };
     } catch (error) {
-        console.error('Error sending OTP email:', {
-            message: error.message,
-            code: error.code
-        });
+        console.error('Exception sending OTP email:', error);
         return { success: false, error: error.message };
     }
 };
 
 const sendStatusUpdateEmail = async (to, trackingId, newStatus, citizenName = '', note = '', grievanceTitle = '') => {
-    const transporter = createTransporter();
     try {
         const statusConfig = {
             pending:     { color: '#F59E0B', bg: '#FFFBEB', icon: '🕐', label: 'Pending Review' },
@@ -148,8 +122,8 @@ const sendStatusUpdateEmail = async (to, trackingId, newStatus, citizenName = ''
 
         const titleSection = grievanceTitle ? `<p style="font-size: 14px; color: #888; text-align: center; margin-top: -12px; margin-bottom: 24px;">📄 ${grievanceTitle}</p>` : '';
 
-        const mailOptions = {
-            from: `"Smart Grievance System" <${process.env.SMTP_FROM || process.env.SMTP_USER}>`,
+        const data = await resend.emails.send({
+            from: getFromAddress(),
             to,
             subject: `${cfg.icon} Grievance ${trackingId} — Status: ${cfg.label}`,
             html: `
@@ -204,22 +178,23 @@ const sendStatusUpdateEmail = async (to, trackingId, newStatus, citizenName = ''
                     </div>
                 </div>
             `
-        };
+        });
 
-        const info = await transporter.sendMail(mailOptions);
-        console.log('Status update email sent to %s: %s', to, info.messageId);
+        if (data.error) {
+            console.error('Error sending status update email:', data.error);
+            return { success: false, error: data.error.message };
+        }
+
+        console.log('Status update email sent via Resend API');
         return { success: true };
     } catch (error) {
-        console.error('Error sending status update email:', {
-            message: error.message,
-            code: error.code
-        });
+        console.error('Exception sending status update email:', error);
         return { success: false, error: error.message };
     }
 };
 
 module.exports = {
-    createTransporter,
+    // createTransporter is removed
     sendRegistrationOTPEmail,
     sendOTPEmail,
     sendStatusUpdateEmail
